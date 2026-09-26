@@ -1,63 +1,118 @@
-const { WebSocketServer } = require("ws");
+```js
+const { WebSocketServer, WebSocket } = require("ws");
 
-const PORT = process.env.PORT || 8765;
+const PORT = process.env.PORT || 10000;
 const HOST = "0.0.0.0";
 
-let totalBytes = 0;
-let lastReport = Date.now();
+// Discord bot will connect to this relay.
+let discordSocket = null;
 
 const wss = new WebSocketServer({
-  host: HOST,
-  port: PORT
+    host: HOST,
+    port: PORT
 });
 
 console.log("========================================");
-console.log("MAHDI MUSIC AUDIO RECEIVER");
+console.log("MAHDI MUSIC AUDIO RELAY");
 console.log("========================================");
-console.log("Listening on ws://" + HOST + ":" + PORT);
-console.log("Waiting for helper...");
+console.log(`Listening on ws://${HOST}:${PORT}`);
+console.log("Waiting for connections...");
 console.log("========================================");
 
 wss.on("connection", (socket) => {
-  totalBytes = 0;
 
-  console.log("");
-  console.log("HELPER CONNECTED");
-  console.log("Receiving audio data...");
-  console.log("");
+    console.log("");
+    console.log("WebSocket connection received.");
+    console.log("");
 
-  socket.on("message", (data) => {
-    totalBytes += data.length;
+    // First connection is the audio helper.
+    // Second connection is the Discord bot.
+    if (!global.audioHelper) {
 
-    const now = Date.now();
+        global.audioHelper = socket;
 
-    if (now - lastReport >= 1000) {
-      console.log(
-        "Receiving audio: " +
-          (totalBytes / 1024 / 1024).toFixed(2) +
-          " MB/s"
-      );
+        console.log("AUDIO HELPER CONNECTED");
 
-      totalBytes = 0;
-      lastReport = now;
+        socket.on("message", (data) => {
+
+            if (
+                discordSocket &&
+                discordSocket.readyState === WebSocket.OPEN
+            ) {
+                discordSocket.send(data);
+            }
+
+        });
+
+        socket.on("close", () => {
+
+            console.log("AUDIO HELPER DISCONNECTED");
+
+            if (global.audioHelper === socket) {
+                global.audioHelper = null;
+            }
+
+        });
+
+        socket.on("error", (error) => {
+            console.error(
+                "Audio helper error:",
+                error.message
+            );
+        });
+
+        return;
     }
-  });
 
-  socket.on("close", () => {
-    console.log("");
-    console.log("HELPER DISCONNECTED");
-    console.log("");
-  });
+    // Second connection = Discord bot.
+    if (!discordSocket) {
 
-  socket.on("error", (error) => {
-    console.error("WebSocket error:", error.message);
-  });
+        discordSocket = socket;
+
+        console.log("DISCORD BOT CONNECTED");
+        console.log("Audio relay is ready.");
+        console.log("");
+
+        socket.on("close", () => {
+
+            console.log("DISCORD BOT DISCONNECTED");
+
+            if (discordSocket === socket) {
+                discordSocket = null;
+            }
+
+        });
+
+        socket.on("error", (error) => {
+            console.error(
+                "Discord relay error:",
+                error.message
+            );
+        });
+
+        return;
+    }
+
+    // Reject additional connections.
+    console.log("Extra connection rejected.");
+
+    socket.close();
 });
 
 wss.on("listening", () => {
-  console.log("WebSocket server is listening on port " + PORT);
+
+    console.log(
+        `WebSocket relay listening on port ${PORT}`
+    );
+
 });
 
 wss.on("error", (error) => {
-  console.error("Server error:", error.message);
+
+    console.error(
+        "Relay server error:",
+        error.message
+    );
+
 });
+```

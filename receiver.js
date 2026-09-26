@@ -1,4 +1,3 @@
-```js
 const { WebSocketServer, WebSocket } = require("ws");
 
 const PORT = process.env.PORT || 10000;
@@ -8,8 +7,8 @@ let audioSocket = null;
 let discordSocket = null;
 
 const wss = new WebSocketServer({
-    host: HOST,
-    port: PORT
+host: HOST,
+port: PORT
 });
 
 console.log("========================================");
@@ -21,163 +20,165 @@ console.log("========================================");
 
 wss.on("connection", function (socket) {
 
-    console.log("");
-    console.log("New WebSocket connection");
-    console.log("Waiting for connection type...");
-    console.log("");
+```
+console.log("");
+console.log("New WebSocket connection");
+console.log("Waiting for connection type...");
+console.log("");
 
-    let connectionType = null;
+let connectionType = null;
 
-    socket.on("message", function (data, isBinary) {
+socket.on("message", function (data, isBinary) {
 
-        // First message identifies the connection.
-        if (!connectionType) {
+    if (!connectionType) {
 
-            if (isBinary) {
-                console.log("Binary data received before identification.");
-                socket.close();
+        if (isBinary) {
+            console.log("Binary data received before identification.");
+            socket.close();
+            return;
+        }
+
+        try {
+
+            const message = JSON.parse(data.toString());
+
+            if (message.type === "audio") {
+
+                if (audioSocket) {
+                    console.log("Audio helper already connected.");
+                    socket.close();
+                    return;
+                }
+
+                connectionType = "audio";
+                audioSocket = socket;
+
+                console.log("AUDIO HELPER CONNECTED");
+
+                if (discordSocket) {
+                    console.log("AUDIO + DISCORD RELAY READY");
+                }
+
                 return;
             }
 
+            if (message.type === "discord") {
+
+                if (discordSocket) {
+                    console.log("Discord bot already connected.");
+                    socket.close();
+                    return;
+                }
+
+                connectionType = "discord";
+                discordSocket = socket;
+
+                console.log("DISCORD BOT CONNECTED");
+
+                if (audioSocket) {
+                    console.log("AUDIO + DISCORD RELAY READY");
+                } else {
+                    console.log("Waiting for audio helper...");
+                }
+
+                return;
+            }
+
+            console.log(
+                "Unknown connection type: " +
+                message.type
+            );
+
+            socket.close();
+
+        } catch (error) {
+
+            console.log(
+                "Invalid identification message: " +
+                error.message
+            );
+
+            socket.close();
+        }
+
+        return;
+    }
+
+    if (connectionType === "audio") {
+
+        if (
+            discordSocket &&
+            discordSocket.readyState === WebSocket.OPEN
+        ) {
+
             try {
-
-                const message = JSON.parse(data.toString());
-
-                if (message.type === "audio") {
-
-                    if (audioSocket) {
-                        console.log("Audio helper already connected.");
-                        socket.close();
-                        return;
-                    }
-
-                    connectionType = "audio";
-                    audioSocket = socket;
-
-                    console.log("========================================");
-                    console.log("AUDIO HELPER CONNECTED");
-                    console.log("========================================");
-
-                    if (discordSocket) {
-                        console.log("AUDIO + DISCORD RELAY READY");
-                    }
-
-                    return;
-                }
-
-                if (message.type === "discord") {
-
-                    if (discordSocket) {
-                        console.log("Discord bot already connected.");
-                        socket.close();
-                        return;
-                    }
-
-                    connectionType = "discord";
-                    discordSocket = socket;
-
-                    console.log("========================================");
-                    console.log("DISCORD BOT CONNECTED");
-                    console.log("========================================");
-
-                    if (audioSocket) {
-                        console.log("AUDIO + DISCORD RELAY READY");
-                    } else {
-                        console.log("Waiting for audio helper...");
-                    }
-
-                    return;
-                }
-
-                console.log("Unknown connection type: " + message.type);
-                socket.close();
-
+                discordSocket.send(data);
             } catch (error) {
-
                 console.log(
-                    "Invalid identification message: " +
+                    "Failed to forward audio: " +
                     error.message
                 );
-
-                socket.close();
-            }
-
-            return;
-        }
-
-        // Forward audio from the helper to Discord.
-        if (connectionType === "audio") {
-
-            if (
-                discordSocket &&
-                discordSocket.readyState === WebSocket.OPEN
-            ) {
-
-                try {
-                    discordSocket.send(data);
-                } catch (error) {
-                    console.log(
-                        "Failed to forward audio: " +
-                        error.message
-                    );
-                }
-
-            }
-
-            return;
-        }
-
-        // Discord does not send audio to Render.
-        if (connectionType === "discord") {
-            return;
-        }
-    });
-
-    socket.on("close", function () {
-
-        if (connectionType === "audio") {
-
-            console.log("AUDIO HELPER DISCONNECTED");
-
-            if (audioSocket === socket) {
-                audioSocket = null;
             }
         }
 
-        if (connectionType === "discord") {
+        return;
+    }
 
-            console.log("DISCORD BOT DISCONNECTED");
+    if (connectionType === "discord") {
+        return;
+    }
+});
 
-            if (discordSocket === socket) {
-                discordSocket = null;
-            }
+socket.on("close", function () {
+
+    if (connectionType === "audio") {
+
+        console.log("AUDIO HELPER DISCONNECTED");
+
+        if (audioSocket === socket) {
+            audioSocket = null;
         }
-    });
+    }
 
-    socket.on("error", function (error) {
+    if (connectionType === "discord") {
 
-        console.error(
-            (connectionType || "Unknown") +
-            " WebSocket error: " +
-            error.message
-        );
+        console.log("DISCORD BOT DISCONNECTED");
 
-    });
+        if (discordSocket === socket) {
+            discordSocket = null;
+        }
+    }
+});
+
+socket.on("error", function (error) {
+
+    console.error(
+        (connectionType || "Unknown") +
+        " WebSocket error: " +
+        error.message
+    );
+
+});
+```
+
 });
 
 wss.on("listening", function () {
 
-    console.log(
-        "WebSocket relay listening on port " + PORT
-    );
+```
+console.log(
+    "WebSocket relay listening on port " + PORT
+);
+```
 
 });
 
 wss.on("error", function (error) {
 
-    console.error(
-        "Relay server error: " + error.message
-    );
+```
+console.error(
+    "Relay server error: " + error.message
+);
+```
 
 });
-```

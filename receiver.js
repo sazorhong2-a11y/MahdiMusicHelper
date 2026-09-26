@@ -143,7 +143,7 @@ socket.on("message", function (data, isBinary) {
         ) {
 
             try {
-
+console.log("FORWARDING AUDIO:", data.length, "bytes");
                 discordSocket.send(data);
 
             } catch (error) {

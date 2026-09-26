@@ -1,6 +1,9 @@
-const { WebSocketServer } = require("ws");
+const { WebSocketServer, WebSocket } = require("ws");
 
 const PORT = process.env.PORT || 10000;
+
+let helper = null;
+let discordBot = null;
 
 const server = new WebSocketServer({
     host: "0.0.0.0",
@@ -8,21 +11,69 @@ const server = new WebSocketServer({
 });
 
 console.log("========================================");
-console.log("MAHDI MUSIC AUDIO RECEIVER");
+console.log("MAHDI MUSIC AUDIO RELAY");
 console.log("========================================");
 console.log("Listening on port " + PORT);
-console.log("Waiting for helper...");
+console.log("Waiting for connections...");
 console.log("========================================");
 
 server.on("connection", (socket) => {
-    console.log("HELPER CONNECTED");
 
-    socket.on("message", (data) => {
-        console.log("Received audio data:", data.length, "bytes");
-    });
+    console.log("New WebSocket connection");
 
-    socket.on("close", () => {
-        console.log("HELPER DISCONNECTED");
+    socket.once("message", (message) => {
+
+        const text = message.toString();
+
+        // Discord bot identifies itself
+        if (text === "DISCORD_BOT") {
+
+            discordBot = socket;
+
+            console.log("DISCORD BOT CONNECTED");
+
+            socket.on("close", () => {
+                console.log("DISCORD BOT DISCONNECTED");
+
+                if (discordBot === socket) {
+                    discordBot = null;
+                }
+            });
+
+            return;
+        }
+
+        // Audio helper identifies itself
+        if (text === "AUDIO_HELPER") {
+
+            helper = socket;
+
+            console.log("AUDIO HELPER CONNECTED");
+
+            socket.on("message", (data) => {
+
+                if (
+                    discordBot &&
+                    discordBot.readyState === WebSocket.OPEN
+                ) {
+                    discordBot.send(data);
+                }
+
+            });
+
+            socket.on("close", () => {
+                console.log("AUDIO HELPER DISCONNECTED");
+
+                if (helper === socket) {
+                    helper = null;
+                }
+            });
+
+            return;
+        }
+
+        console.log("Unknown connection type");
+        socket.close();
     });
 
     socket.on("error", (error) => {
@@ -31,9 +82,18 @@ server.on("connection", (socket) => {
 });
 
 server.on("listening", () => {
-    console.log("WebSocket server is listening on port " + PORT);
+
+    console.log(
+        "WebSocket relay listening on port " + PORT
+    );
+
 });
 
 server.on("error", (error) => {
-    console.log("Server error:", error.message);
+
+    console.log(
+        "Server error:",
+        error.message
+    );
+
 });

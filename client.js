@@ -6,7 +6,7 @@ const FFMPEG_PATH =
 
 // Keep localhost for now.
 // We will change this to the cloud server later.
-const SERVER_URL = "ws://127.0.0.1:8765";
+const SERVER_URL = "wss://mahdimusichelper.onrender.com";
 
 const CABLE_DEVICE = "audio=CABLE Output (VB-Audio Virtual Cable)";
 

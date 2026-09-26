@@ -20,15 +20,23 @@ console.log("========================================");
 
 wss.on("connection", function (socket) {
 
+
 console.log("");
 console.log("New WebSocket connection");
 console.log("Waiting for connection type...");
 console.log("");
 
+socket.isAlive = true;
+
+socket.on("pong", function () {
+    socket.isAlive = true;
+});
+
 let connectionType = null;
 
 socket.on("message", function (data, isBinary) {
 
+    // First message identifies the connection.
     if (!connectionType) {
 
         if (isBinary) {
@@ -44,6 +52,7 @@ socket.on("message", function (data, isBinary) {
 
             const message = JSON.parse(data.toString());
 
+            // AUDIO HELPER
             if (message.type === "audio") {
 
                 if (audioSocket) {
@@ -59,9 +68,7 @@ socket.on("message", function (data, isBinary) {
                 connectionType = "audio";
                 audioSocket = socket;
 
-                console.log(
-                    "AUDIO HELPER CONNECTED"
-                );
+                console.log("AUDIO HELPER CONNECTED");
 
                 if (discordSocket) {
                     console.log(
@@ -76,6 +83,7 @@ socket.on("message", function (data, isBinary) {
                 return;
             }
 
+            // DISCORD BOT
             if (message.type === "discord") {
 
                 if (discordSocket) {
@@ -91,18 +99,13 @@ socket.on("message", function (data, isBinary) {
                 connectionType = "discord";
                 discordSocket = socket;
 
-                console.log(
-                    "DISCORD BOT CONNECTED"
-                );
+                console.log("DISCORD BOT CONNECTED");
 
                 if (audioSocket) {
-
                     console.log(
                         "AUDIO + DISCORD RELAY READY"
                     );
-
                 } else {
-
                     console.log(
                         "Waiting for audio helper..."
                     );
@@ -131,6 +134,7 @@ socket.on("message", function (data, isBinary) {
         return;
     }
 
+    // AUDIO -> DISCORD
     if (connectionType === "audio") {
 
         if (
@@ -154,6 +158,7 @@ socket.on("message", function (data, isBinary) {
         return;
     }
 
+    // DISCORD does not send audio.
     if (connectionType === "discord") {
         return;
     }
@@ -163,9 +168,7 @@ socket.on("close", function () {
 
     if (connectionType === "audio") {
 
-        console.log(
-            "AUDIO HELPER DISCONNECTED"
-        );
+        console.log("AUDIO HELPER DISCONNECTED");
 
         if (audioSocket === socket) {
             audioSocket = null;
@@ -174,9 +177,7 @@ socket.on("close", function () {
 
     if (connectionType === "discord") {
 
-        console.log(
-            "DISCORD BOT DISCONNECTED"
-        );
+        console.log("DISCORD BOT DISCONNECTED");
 
         if (discordSocket === socket) {
             discordSocket = null;
@@ -193,9 +194,50 @@ socket.on("error", function (error) {
     );
 });
 
+
+});
+
+// Server-side heartbeat.
+// Render recommends periodic ping/pong handling for long-lived
+// WebSocket connections.
+
+const heartbeatInterval = setInterval(function () {
+
+
+wss.clients.forEach(function (socket) {
+
+    if (socket.isAlive === false) {
+
+        console.log(
+            "WebSocket did not respond to heartbeat. Terminating..."
+        );
+
+        socket.terminate();
+        return;
+    }
+
+    socket.isAlive = false;
+
+    try {
+        socket.ping();
+    } catch (error) {
+        console.log(
+            "Heartbeat ping failed: " +
+            error.message
+        );
+    }
+});
+
+}, 30000);
+
+wss.on("close", function () {
+
+clearInterval(heartbeatInterval);
+
 });
 
 wss.on("listening", function () {
+
 
 console.log(
     "WebSocket relay listening on port " + PORT

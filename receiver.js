@@ -1,24 +1,25 @@
-﻿const { WebSocketServer } = require("ws");
+```js
+const { WebSocketServer } = require("ws");
 
-const PORT = 8765;
+const PORT = process.env.PORT || 8765;
+const HOST = "0.0.0.0";
 
 let totalBytes = 0;
-let connected = false;
 let lastReport = Date.now();
 
 const wss = new WebSocketServer({
+  host: HOST,
   port: PORT
 });
 
 console.log("========================================");
-console.log("MAHDI MUSIC AUDIO RECEIVER TEST");
+console.log("MAHDI MUSIC AUDIO RECEIVER");
 console.log("========================================");
-console.log(`Listening on ws://127.0.0.1:${PORT}`);
+console.log(`Listening on ws://${HOST}:${PORT}`);
 console.log("Waiting for helper...");
 console.log("========================================");
 
 wss.on("connection", (socket) => {
-  connected = true;
   totalBytes = 0;
 
   console.log("");
@@ -33,7 +34,7 @@ wss.on("connection", (socket) => {
 
     if (now - lastReport >= 1000) {
       console.log(
-        `Receiving audio: ${(totalBytes / 1024 / 1024).toFixed(2)} MB`
+        `Receiving audio: ${(totalBytes / 1024 / 1024).toFixed(2)} MB/s`
       );
 
       totalBytes = 0;
@@ -42,7 +43,6 @@ wss.on("connection", (socket) => {
   });
 
   socket.on("close", () => {
-    connected = false;
     console.log("");
     console.log("HELPER DISCONNECTED");
     console.log("");
@@ -53,6 +53,11 @@ wss.on("connection", (socket) => {
   });
 });
 
+wss.on("listening", () => {
+  console.log(`WebSocket server is listening on port ${PORT}`);
+});
+
 wss.on("error", (error) => {
   console.error("Server error:", error.message);
 });
+```

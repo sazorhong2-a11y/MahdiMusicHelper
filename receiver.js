@@ -15,11 +15,11 @@ const wss = new WebSocketServer({
 console.log("========================================");
 console.log("MAHDI MUSIC AUDIO RELAY");
 console.log("========================================");
-console.log(`Listening on port ${PORT}`);
+console.log("Listening on port " + PORT);
 console.log("Waiting for connections...");
 console.log("========================================");
 
-wss.on("connection", (socket) => {
+wss.on("connection", function (socket) {
 
     console.log("");
     console.log("New WebSocket connection");
@@ -28,18 +28,19 @@ wss.on("connection", (socket) => {
 
     let connectionType = null;
 
-    socket.on("message", (data, isBinary) => {
+    socket.on("message", function (data, isBinary) {
 
-        // First message must identify the connection.
+        // First message identifies the connection.
         if (!connectionType) {
 
             if (isBinary) {
-                console.log("Connection sent binary data before identifying.");
+                console.log("Binary data received before identification.");
                 socket.close();
                 return;
             }
 
             try {
+
                 const message = JSON.parse(data.toString());
 
                 if (message.type === "audio") {
@@ -56,6 +57,10 @@ wss.on("connection", (socket) => {
                     console.log("========================================");
                     console.log("AUDIO HELPER CONNECTED");
                     console.log("========================================");
+
+                    if (discordSocket) {
+                        console.log("AUDIO + DISCORD RELAY READY");
+                    }
 
                     return;
                 }
@@ -84,13 +89,13 @@ wss.on("connection", (socket) => {
                     return;
                 }
 
-                console.log("Unknown connection type:", message.type);
+                console.log("Unknown connection type: " + message.type);
                 socket.close();
 
             } catch (error) {
 
                 console.log(
-                    "Invalid identification message:",
+                    "Invalid identification message: " +
                     error.message
                 );
 
@@ -100,33 +105,35 @@ wss.on("connection", (socket) => {
             return;
         }
 
-        // Audio helper is sending PCM audio.
+        // Forward audio from the helper to Discord.
         if (connectionType === "audio") {
 
             if (
                 discordSocket &&
                 discordSocket.readyState === WebSocket.OPEN
             ) {
+
                 try {
                     discordSocket.send(data);
                 } catch (error) {
                     console.log(
-                        "Failed to forward audio:",
+                        "Failed to forward audio: " +
                         error.message
                     );
                 }
+
             }
 
             return;
         }
 
-        // Discord connection should not normally send audio.
+        // Discord does not send audio to Render.
         if (connectionType === "discord") {
             return;
         }
     });
 
-    socket.on("close", () => {
+    socket.on("close", function () {
 
         if (connectionType === "audio") {
 
@@ -135,7 +142,6 @@ wss.on("connection", (socket) => {
             if (audioSocket === socket) {
                 audioSocket = null;
             }
-
         }
 
         if (connectionType === "discord") {
@@ -145,33 +151,32 @@ wss.on("connection", (socket) => {
             if (discordSocket === socket) {
                 discordSocket = null;
             }
-
         }
     });
 
-    socket.on("error", (error) => {
+    socket.on("error", function (error) {
 
         console.error(
-            `${connectionType || "Unknown"} WebSocket error:`,
+            (connectionType || "Unknown") +
+            " WebSocket error: " +
             error.message
         );
 
     });
 });
 
-wss.on("listening", () => {
+wss.on("listening", function () {
 
     console.log(
-        `WebSocket relay listening on port ${PORT}`
+        "WebSocket relay listening on port " + PORT
     );
 
 });
 
-wss.on("error", (error) => {
+wss.on("error", function (error) {
 
     console.error(
-        "Relay server error:",
-        error.message
+        "Relay server error: " + error.message
     );
 
 });

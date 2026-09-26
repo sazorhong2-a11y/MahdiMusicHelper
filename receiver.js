@@ -20,7 +20,6 @@ console.log("========================================");
 
 wss.on("connection", function (socket) {
 
-```
 console.log("");
 console.log("New WebSocket connection");
 console.log("Waiting for connection type...");
@@ -33,7 +32,10 @@ socket.on("message", function (data, isBinary) {
     if (!connectionType) {
 
         if (isBinary) {
-            console.log("Binary data received before identification.");
+            console.log(
+                "Binary data received before identification."
+            );
+
             socket.close();
             return;
         }
@@ -45,7 +47,11 @@ socket.on("message", function (data, isBinary) {
             if (message.type === "audio") {
 
                 if (audioSocket) {
-                    console.log("Audio helper already connected.");
+
+                    console.log(
+                        "Audio helper already connected."
+                    );
+
                     socket.close();
                     return;
                 }
@@ -53,10 +59,18 @@ socket.on("message", function (data, isBinary) {
                 connectionType = "audio";
                 audioSocket = socket;
 
-                console.log("AUDIO HELPER CONNECTED");
+                console.log(
+                    "AUDIO HELPER CONNECTED"
+                );
 
                 if (discordSocket) {
-                    console.log("AUDIO + DISCORD RELAY READY");
+                    console.log(
+                        "AUDIO + DISCORD RELAY READY"
+                    );
+                } else {
+                    console.log(
+                        "Waiting for Discord bot..."
+                    );
                 }
 
                 return;
@@ -65,7 +79,11 @@ socket.on("message", function (data, isBinary) {
             if (message.type === "discord") {
 
                 if (discordSocket) {
-                    console.log("Discord bot already connected.");
+
+                    console.log(
+                        "Discord bot already connected."
+                    );
+
                     socket.close();
                     return;
                 }
@@ -73,12 +91,21 @@ socket.on("message", function (data, isBinary) {
                 connectionType = "discord";
                 discordSocket = socket;
 
-                console.log("DISCORD BOT CONNECTED");
+                console.log(
+                    "DISCORD BOT CONNECTED"
+                );
 
                 if (audioSocket) {
-                    console.log("AUDIO + DISCORD RELAY READY");
+
+                    console.log(
+                        "AUDIO + DISCORD RELAY READY"
+                    );
+
                 } else {
-                    console.log("Waiting for audio helper...");
+
+                    console.log(
+                        "Waiting for audio helper..."
+                    );
                 }
 
                 return;
@@ -112,8 +139,11 @@ socket.on("message", function (data, isBinary) {
         ) {
 
             try {
+
                 discordSocket.send(data);
+
             } catch (error) {
+
                 console.log(
                     "Failed to forward audio: " +
                     error.message
@@ -133,7 +163,9 @@ socket.on("close", function () {
 
     if (connectionType === "audio") {
 
-        console.log("AUDIO HELPER DISCONNECTED");
+        console.log(
+            "AUDIO HELPER DISCONNECTED"
+        );
 
         if (audioSocket === socket) {
             audioSocket = null;
@@ -142,7 +174,9 @@ socket.on("close", function () {
 
     if (connectionType === "discord") {
 
-        console.log("DISCORD BOT DISCONNECTED");
+        console.log(
+            "DISCORD BOT DISCONNECTED"
+        );
 
         if (discordSocket === socket) {
             discordSocket = null;
@@ -157,28 +191,23 @@ socket.on("error", function (error) {
         " WebSocket error: " +
         error.message
     );
-
 });
-```
 
 });
 
 wss.on("listening", function () {
 
-```
 console.log(
     "WebSocket relay listening on port " + PORT
 );
-```
 
 });
 
 wss.on("error", function (error) {
 
-```
 console.error(
-    "Relay server error: " + error.message
+    "Relay server error: " +
+    error.message
 );
-```
 
 });

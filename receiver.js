@@ -2,6 +2,120 @@
 const { WebSocketServer, WebSocket } = require("ws");
 
 const PORT = process.env.PORT || 10000;
+
+let audioHelper = null;
+let discordBot = null;
+
+const wss = new WebSocketServer({
+    host: "0.0.0.0",
+    port: PORT
+});
+
+console.log("========================================");
+console.log("MAHDI MUSIC AUDIO RELAY");
+console.log("========================================");
+console.log("Listening on port " + PORT);
+console.log("Waiting for connections...");
+console.log("========================================");
+
+wss.on("connection", function(socket) {
+
+    console.log("New connection received");
+
+    if (!audioHelper) {
+
+        audioHelper = socket;
+
+        console.log("AUDIO HELPER CONNECTED");
+
+        socket.on("message", function(data) {
+
+            if (
+                discordBot &&
+                discordBot.readyState === WebSocket.OPEN
+            ) {
+                discordBot.send(data);
+            }
+
+        });
+
+        socket.on("close", function() {
+
+            console.log("AUDIO HELPER DISCONNECTED");
+
+            if (audioHelper === socket) {
+                audioHelper = null;
+            }
+
+        });
+
+        socket.on("error", function(error) {
+
+            console.log(
+                "Audio helper error:",
+                error.message
+            );
+
+        });
+
+        return;
+    }
+
+    if (!discordBot) {
+
+        discordBot = socket;
+
+        console.log("DISCORD BOT CONNECTED");
+        console.log("AUDIO RELAY READY");
+
+        socket.on("close", function() {
+
+            console.log("DISCORD BOT DISCONNECTED");
+
+            if (discordBot === socket) {
+                discordBot = null;
+            }
+
+        });
+
+        socket.on("error", function(error) {
+
+            console.log(
+                "Discord bot error:",
+                error.message
+            );
+
+        });
+
+        return;
+    }
+
+    console.log("Extra connection rejected");
+
+    socket.close();
+});
+
+wss.on("listening", function() {
+
+    console.log(
+        "WebSocket server listening on port " + PORT
+    );
+
+});
+
+wss.on("error", function(error) {
+
+    console.log(
+        "Server error:",
+        error.message
+    );
+
+});
+```
+```js
+const { WebSocketServer, WebSocket } = require("ws");
+
+const PORT = process.env.PORT || 10000;
 const HOST = "0.0.0.0";
 
 let audioHelper = null;
